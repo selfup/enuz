@@ -25,36 +25,18 @@ pub fn main() !void {
 
     var entries = std.ArrayList(AsciiEntry).init(allocator);
     defer entries.deinit();
-    defer for (entries.items) |entry| {
-        allocator.free(entry.dec);
-        allocator.free(entry.hex);
-        allocator.free(entry.binary);
-        allocator.free(entry.html);
-        allocator.free(entry.char);
-        allocator.free(entry.description);
-    };
 
     var lines = std.mem.tokenizeScalar(u8, file_content, '\n');
-    
-    // Skip header line
+
+    // skip header line
     _ = lines.next();
 
     while (lines.next()) |line| {
         var fields = std.ArrayList([]const u8).init(allocator);
         defer fields.deinit();
 
-        var field_start: usize = 0;
-        var i: usize = 0;
-        while (i < line.len) : (i += 1) {
-            if (line[i] == ',') {
-                const field = try allocator.dupe(u8, line[field_start..i]);
-                try fields.append(field);
-                field_start = i + 1;
-            }
-        }
-        // Add the last field
-        if (field_start < line.len) {
-            const field = try allocator.dupe(u8, line[field_start..]);
+        var field_iter = std.mem.tokenizeScalar(u8, line, ',');
+        while (field_iter.next()) |field| {
             try fields.append(field);
         }
 
@@ -67,19 +49,16 @@ pub fn main() !void {
                 .char = fields.items[4],
                 .description = fields.items[5],
             };
+
             try entries.append(entry);
-        } else {
-            // Free allocated fields if not used
-            for (fields.items) |field| {
-                allocator.free(field);
-            }
         }
     }
 
     const stdout = std.io.getStdOut().writer();
+
     try stdout.print("ASCII Table - Dec and Description\n", .{});
     try stdout.print("==================================\n", .{});
-    
+
     for (entries.items) |entry| {
         try stdout.print("Dec: {s:3} - Description: {s}\n", .{ entry.dec, entry.description });
     }
