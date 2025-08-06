@@ -1,5 +1,9 @@
 const std = @import("std");
 
+const LINE_DELIMITER: u8 = '\n';
+const FIELD_DELIMITER: u8 = ',';
+const CSV_FILE: []const u8 = "ascii.csv";
+
 const AsciiEntry = struct {
     dec: []const u8,
     hex: []const u8,
@@ -9,8 +13,8 @@ const AsciiEntry = struct {
     description: []const u8,
 };
 
-fn readCsv(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
-    const file = try std.fs.cwd().openFile(path, .{});
+fn readCsv(allocator: std.mem.Allocator) ![]u8 {
+    const file = try std.fs.cwd().openFile(CSV_FILE, .{});
     defer file.close();
 
     const file_stat = try file.stat();
@@ -23,7 +27,7 @@ fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayLi
     var entries = std.ArrayList(AsciiEntry).init(allocator);
     errdefer entries.deinit();
 
-    var lines = std.mem.tokenizeScalar(u8, file_content, '\n');
+    var lines = std.mem.tokenizeScalar(u8, file_content, LINE_DELIMITER);
 
     // skip header line
     _ = lines.next();
@@ -32,7 +36,7 @@ fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayLi
         var fields = std.ArrayList([]const u8).init(allocator);
         defer fields.deinit();
 
-        var field_iter = std.mem.tokenizeScalar(u8, line, ',');
+        var field_iter = std.mem.tokenizeScalar(u8, line, FIELD_DELIMITER);
         while (field_iter.next()) |field| {
             try fields.append(field);
         }
@@ -71,7 +75,7 @@ pub fn main() !void {
 
     const allocator = gpa.allocator();
 
-    const file_content = try readCsv(allocator, "ascii.csv");
+    const file_content = try readCsv(allocator);
     defer allocator.free(file_content);
 
     var entries = try parseCsv(allocator, file_content);
