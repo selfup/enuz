@@ -9,22 +9,19 @@ const AsciiEntry = struct {
     description: []const u8,
 };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
-
-    const file = try std.fs.cwd().openFile("ascii.csv", .{});
+fn readCsv(allocator: std.mem.Allocator, path: []const u8) ![]u8 {
+    const file = try std.fs.cwd().openFile(path, .{});
     defer file.close();
 
     const file_stat = try file.stat();
     const file_size = file_stat.size;
 
-    const file_content = try file.readToEndAlloc(allocator, file_size);
-    defer allocator.free(file_content);
+    return try file.readToEndAlloc(allocator, file_size);
+}
 
+fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayList(AsciiEntry) {
     var entries = std.ArrayList(AsciiEntry).init(allocator);
-    defer entries.deinit();
+    errdefer entries.deinit();
 
     var lines = std.mem.tokenizeScalar(u8, file_content, '\n');
 
@@ -54,6 +51,10 @@ pub fn main() !void {
         }
     }
 
+    return entries;
+}
+
+fn printAsciiTable(entries: std.ArrayList(AsciiEntry)) !void {
     const stdout = std.io.getStdOut().writer();
 
     try stdout.print("ASCII Table - Dec and Description\n", .{});
@@ -62,4 +63,19 @@ pub fn main() !void {
     for (entries.items) |entry| {
         try stdout.print("Dec: {s:3} - Description: {s}\n", .{ entry.dec, entry.description });
     }
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    const allocator = gpa.allocator();
+
+    const file_content = try readCsv(allocator, "ascii.csv");
+    defer allocator.free(file_content);
+
+    var entries = try parseCsv(allocator, file_content);
+    defer entries.deinit();
+
+    try printAsciiTable(entries);
 }
