@@ -1,6 +1,6 @@
 # Enuz
 
-Enum Based Lnaguage in Zig!
+Enum Based Language in Zig!
 
 Maybe.
 
