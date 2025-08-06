@@ -2,7 +2,7 @@ const std = @import("std");
 
 const LINE_DELIMITER: u8 = '\n';
 const FIELD_DELIMITER: u8 = ',';
-const CSV_FILE: []const u8 = "ascii.csv";
+const CSV_FILE: []const u8 = "fixtures/ascii.csv";
 
 const AsciiEntry = struct {
     dec: []const u8,
