@@ -28,7 +28,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-
     // Now, we will create a static library based on the module we created above.
     // This creates a `std.Build.Step.Compile`, which is the build step responsible
     // for actually invoking the compiler.
