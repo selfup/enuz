@@ -7,9 +7,9 @@ const CSV_FILE: []const u8 = "data/ascii.csv";
 const AsciiEntry = struct {
     dec: []const u8,
     hex: []const u8,
-    binary: []const u8,
     html: []const u8,
     char: []const u8,
+    binary: []const u8,
     description: []const u8,
 };
 
@@ -24,21 +24,21 @@ fn readCsv(allocator: std.mem.Allocator) ![]u8 {
 }
 
 fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayList(AsciiEntry) {
-    var entries = std.ArrayList(AsciiEntry).init(allocator);
-    errdefer entries.deinit();
+    var entries = std.ArrayList(AsciiEntry){};
+    errdefer entries.deinit(allocator);
 
     var lines = std.mem.tokenizeScalar(u8, file_content, LINE_DELIMITER);
 
-    // skip header line
+    // skip csv file header line
     _ = lines.next();
 
     while (lines.next()) |line| {
-        var fields = std.ArrayList([]const u8).init(allocator);
-        defer fields.deinit();
+        var fields = std.ArrayList([]const u8){};
+        defer fields.deinit(allocator);
 
         var field_iter = std.mem.tokenizeScalar(u8, line, FIELD_DELIMITER);
         while (field_iter.next()) |field| {
-            try fields.append(field);
+            try fields.append(allocator, field);
         }
 
         if (fields.items.len == 6) {
@@ -51,7 +51,7 @@ fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayLi
                 .description = fields.items[5],
             };
 
-            try entries.append(entry);
+            try entries.append(allocator, entry);
         }
     }
 
@@ -59,13 +59,17 @@ fn parseCsv(allocator: std.mem.Allocator, file_content: []const u8) !std.ArrayLi
 }
 
 fn printAsciiTable(entries: std.ArrayList(AsciiEntry)) !void {
-    const stdout = std.io.getStdOut().writer();
+    const stdout = std.fs.File.stdout();
 
-    try stdout.print("ASCII Table - Dec and Description\n", .{});
-    try stdout.print("==================================\n", .{});
+    try stdout.writeAll("ASCII Table - Dec and Description\n");
+    try stdout.writeAll("==================================\n");
 
     for (entries.items) |entry| {
-        try stdout.print("Dec: {s:3} - Description: {s}\n", .{ entry.dec, entry.description });
+        var buf: [256]u8 = undefined;
+
+        const line = try std.fmt.bufPrint(&buf, "Dec: {s:3} - Description: {s}\n", .{ entry.dec, entry.description });
+
+        try stdout.writeAll(line);
     }
 }
 
@@ -79,7 +83,7 @@ pub fn main() !void {
     defer allocator.free(file_content);
 
     var entries = try parseCsv(allocator, file_content);
-    defer entries.deinit();
+    defer entries.deinit(allocator);
 
     try printAsciiTable(entries);
 }
